@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#006336">
+<meta name="description" content="Inicializador do SAD GESTÃO — Serviço de Atenção Domiciliar">
+<meta name="referrer" content="no-referrer">
+<link rel="manifest" href="./manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="32x32" href="./icons/icon-32.png">
+<link rel="apple-touch-icon" href="./icons/icon-180.png">
+<title>SAD GESTÃO — Abrir sistema</title>
+<style>
+:root{color-scheme:light;--green:#006336;--blue:#1276bc;--text:#123d33}
+*{box-sizing:border-box}body{margin:0;min-height:100dvh;display:grid;place-items:center;background:linear-gradient(145deg,#e9f7f0,#f4faff);color:var(--text);font-family:system-ui,-apple-system,"Segoe UI",sans-serif}
+main{width:min(92vw,430px);padding:24px 22px;border:1px solid #cee0d9;border-radius:22px;background:white;box-shadow:0 20px 50px #00512c13}
+.brand{display:grid;place-items:center;gap:3px}.brand img{width:118px;height:118px;object-fit:contain}h1{margin:4px 0 0;font-size:1.75rem;color:var(--green)}.sub{font-size:0.88rem;margin:0;color:#49635b;text-align:center}p{line-height:1.55}label{display:block;font-size:.91rem;font-weight:650;margin:18px 0 7px}input{width:100%;font:inherit;border:1px solid #abc4b8;border-radius:10px;padding:12px;outline-offset:3px}button{width:100%;font:inherit;font-weight:700;border:0;border-radius:11px;padding:13px 12px;cursor:pointer;margin-top:11px}button.primary{background:var(--green);color:white}button.secondary{background:#e6f1eb;color:#00592f}small{display:block;color:#526a61;line-height:1.5;margin-top:13px}.warn{color:#8d2d24;font-size:0.88rem;min-height:1.2em}details{margin-top:16px;border-top:1px solid #e4ede9;padding-top:13px}summary{cursor:pointer;font-weight:600}#status{font-size:.9rem;color:#205b48;min-height:1.1em}
+</style>
+</head>
+<body>
+<main>
+<div class="brand"><img src="./icons/icon-192.png" alt="Identidade visual SAD GESTÃO"><h1>SAD GESTÃO</h1><p class="sub">Acesso ao sistema de Atenção Domiciliar</p></div>
+<p>Este é o <strong>inicializador com ícone próprio</strong>. Os prontuários continuam no sistema original protegido pelo Google.</p>
+<form id="setup" autocomplete="off">
+<label for="appurl">Endereço privado do sistema (/exec)</label>
+<input id="appurl" type="url" inputmode="url" placeholder="https://script.google.com/macros/s/.../exec" spellcheck="false" autocomplete="off" required>
+<button class="primary" type="submit">Salvar endereço neste dispositivo</button>
+<div class="warn" id="error" role="alert"></div>
+</form>
+<div id="ready" hidden>
+<button class="primary" id="open" type="button">Abrir SAD GESTÃO</button>
+<p id="status" aria-live="polite"></p>
+<details><summary>Alterar o endereço salvo</summary><button class="secondary" type="button" id="change">Trocar endereço</button></details>
+</div>
+<small>Instale esta página pelo menu do navegador. Em futuras aberturas pelo ícone, o encaminhamento ao sistema será automático. O endereço é salvo <strong>somente neste dispositivo</strong>; nenhuma senha, dado de paciente ou cadastro é enviado a esta página.</small>
+</main>
+<script>
+'use strict';
+const STORAGE_KEY='sad-gestao-exec-v1';
+const $=(id)=>document.getElementById(id);
+function normalize(input){
+ try{
+   const u=new URL(String(input).trim());
+   if(u.protocol!=='https:'||u.hostname!=='script.google.com'||!/^\/macros\/s\/[^/]+\/exec\/?$/.test(u.pathname)) return null;
+   if(u.username||u.password) return null;
+   return u.href;
+ }catch(_){return null;}
+}
+function show(){
+ const url=normalize(localStorage.getItem(STORAGE_KEY)||'');
+ if(!url){$('setup').hidden=false;$('ready').hidden=true;return;}
+ $('setup').hidden=true;$('ready').hidden=false;
+ $('status').textContent='Endereço configurado. Seu login Google será solicitado pelo sistema original, se necessário.';
+}
+$('setup').addEventListener('submit',(event)=>{
+ event.preventDefault();$('error').textContent='';
+ const url=normalize($('appurl').value);
+ if(!url){$('error').textContent='Informe o link original do Google Apps Script terminado em /exec.';return;}
+ localStorage.setItem(STORAGE_KEY,url);$('appurl').value='';show();
+});
+$('open').addEventListener('click',()=>{const url=normalize(localStorage.getItem(STORAGE_KEY)||'');if(url)window.location.assign(url);});
+$('change').addEventListener('click',()=>{localStorage.removeItem(STORAGE_KEY);show();});
+show();
+// No patient data, Google session or auth token is handled here.
+// The public static launcher never proxies or embeds the private app.
+const standalone=window.matchMedia('(display-mode: standalone)').matches||window.navigator.standalone===true;
+if(standalone&&normalize(localStorage.getItem(STORAGE_KEY)||'')){
+ $('status').textContent='Abrindo o SAD GESTÃO…';
+ // One tap on the installed icon launches the Google-hosted app.
+ window.setTimeout(()=>{const url=normalize(localStorage.getItem(STORAGE_KEY)||'');if(url)window.location.assign(url);},450);
+}
+if('serviceWorker' in navigator){navigator.serviceWorker.register('./sw.js').catch(()=>{});}
+</script>
+</body>
+</html>
